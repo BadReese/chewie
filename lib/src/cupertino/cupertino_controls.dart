@@ -604,17 +604,17 @@ class _CupertinoControlsState extends State<CupertinoControls>
       ),
       child: Row(
         children: <Widget>[
-          if (chewieController.allowFullScreen)
-            _buildExpandButton(
+          if (chewieController.allowMuting)
+            _buildMuteButton(
+              controller,
               backgroundColor,
               iconColor,
               barHeight,
               buttonPadding,
             ),
           const Spacer(),
-          if (chewieController.allowMuting)
-            _buildMuteButton(
-              controller,
+          if (chewieController.allowFullScreen)
+            _buildExpandButton(
               backgroundColor,
               iconColor,
               barHeight,
