@@ -93,12 +93,13 @@ class _CupertinoControlsState extends State<CupertinoControls>
           absorbing: notifier.hideStuff,
           child: Stack(
             children: [
-              if (_displayBufferingIndicator)
-                const Center(
-                  child: CircularProgressIndicator(),
-                )
-              else
-                _buildHitArea(),
+              // if (_displayBufferingIndicator)
+              //   const Center(
+              //     child: CircularProgressIndicator(),
+              //   )
+              // else
+              //   _buildHitArea(),
+              _buildHitArea(),
               Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
