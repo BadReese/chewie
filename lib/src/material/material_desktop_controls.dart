@@ -18,8 +18,8 @@ import 'package:video_player/video_player.dart';
 class MaterialDesktopControls extends StatefulWidget {
   const MaterialDesktopControls({
     this.showPlayButton = true,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   final bool showPlayButton;
 
@@ -86,9 +86,10 @@ class _MaterialDesktopControlsState extends State<MaterialDesktopControls>
           child: Stack(
             children: [
               if (_displayBufferingIndicator)
-                const Center(
-                  child: CircularProgressIndicator(),
-                )
+                _chewieController?.bufferingBuilder?.call(context) ??
+                    const Center(
+                      child: CircularProgressIndicator(),
+                    )
               else
                 _buildHitArea(),
               Column(
@@ -327,7 +328,8 @@ class _MaterialDesktopControlsState extends State<MaterialDesktopControls>
   }
 
   Widget _buildHitArea() {
-    final bool isFinished = _latestValue.position >= _latestValue.duration;
+    final bool isFinished = _latestValue.position >= _latestValue.duration &&
+        _latestValue.duration.inSeconds > 0;
     final bool showPlayButton =
         widget.showPlayButton && !_dragging && !notifier.hideStuff;
 
@@ -485,40 +487,39 @@ class _MaterialDesktopControlsState extends State<MaterialDesktopControls>
   void _onExpandCollapse() {
     setState(() {
       notifier.hideStuff = true;
+    });
 
-      chewieController.toggleFullScreen();
-      _showAfterExpandCollapseTimer =
-          Timer(const Duration(milliseconds: 300), () {
-        setState(() {
-          _cancelAndRestartTimer();
-        });
+    chewieController.toggleFullScreen();
+
+    _showAfterExpandCollapseTimer =
+        Timer(const Duration(milliseconds: 300), () {
+      setState(() {
+        _cancelAndRestartTimer();
       });
     });
   }
 
   void _playPause() {
-    final isFinished = _latestValue.position >= _latestValue.duration;
-
-    setState(() {
-      if (controller.value.isPlaying) {
+    if (controller.value.isPlaying) {
+      setState(() {
         notifier.hideStuff = false;
-        _hideTimer?.cancel();
-        controller.pause();
-      } else {
-        _cancelAndRestartTimer();
+      });
 
-        if (!controller.value.isInitialized) {
-          controller.initialize().then((_) {
-            controller.play();
-          });
-        } else {
-          if (isFinished) {
-            controller.seekTo(Duration.zero);
-          }
+      _hideTimer?.cancel();
+      controller.pause();
+    } else {
+      _cancelAndRestartTimer();
+
+      if (!controller.value.isInitialized) {
+        controller.initialize().then((_) {
+          //[VideoPlayerController.play] If the video is at the end, this method starts playing from the beginning
           controller.play();
-        }
+        });
+      } else {
+        //[VideoPlayerController.play] If the video is at the end, this method starts playing from the beginning
+        controller.play();
       }
-    });
+    }
   }
 
   void _startHideTimer() {
@@ -575,6 +576,9 @@ class _MaterialDesktopControlsState extends State<MaterialDesktopControls>
 
           _hideTimer?.cancel();
         },
+        onDragUpdate: () {
+          _hideTimer?.cancel();
+        },
         onDragEnd: () {
           setState(() {
             _dragging = false;
@@ -587,9 +591,10 @@ class _MaterialDesktopControlsState extends State<MaterialDesktopControls>
               playedColor: Theme.of(context).colorScheme.secondary,
               handleColor: Theme.of(context).colorScheme.secondary,
               bufferedColor:
-                  Theme.of(context).colorScheme.background.withOpacity(0.5),
+                  Theme.of(context).colorScheme.surface.withOpacity(0.5),
               backgroundColor: Theme.of(context).disabledColor.withOpacity(.5),
             ),
+        draggableProgressBar: chewieController.draggableProgressBar,
       ),
     );
   }

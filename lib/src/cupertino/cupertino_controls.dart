@@ -22,8 +22,8 @@ class CupertinoControls extends StatefulWidget {
     required this.backgroundColor,
     required this.iconColor,
     this.showPlayButton = true,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   final Color backgroundColor;
   final Color iconColor;
@@ -49,7 +49,7 @@ class _CupertinoControlsState extends State<CupertinoControls>
   bool _subtitleOn = false;
   Timer? _bufferingDisplayTimer;
   bool _displayBufferingIndicator = false;
-
+  double selectedSpeed = 1.0;
   late VideoPlayerController controller;
 
   // We know that _chewieController is set in didChangeDependencies
@@ -347,7 +347,8 @@ class _CupertinoControlsState extends State<CupertinoControls>
   }
 
   Widget _buildHitArea() {
-    final bool isFinished = _latestValue.position >= _latestValue.duration;
+    final bool isFinished = (_latestValue.position >= _latestValue.duration) &&
+        _latestValue.duration.inSeconds > 0;
     final bool showPlayButton =
         widget.showPlayButton && !_latestValue.isPlaying && !_dragging;
 
@@ -560,6 +561,8 @@ class _CupertinoControlsState extends State<CupertinoControls>
 
         if (chosenSpeed != null) {
           controller.setPlaybackSpeed(chosenSpeed);
+
+          selectedSpeed = chosenSpeed;
         }
 
         if (_latestValue.isPlaying) {
@@ -682,6 +685,9 @@ class _CupertinoControlsState extends State<CupertinoControls>
 
             _hideTimer?.cancel();
           },
+          onDragUpdate: () {
+            _hideTimer?.cancel();
+          },
           onDragEnd: () {
             setState(() {
               _dragging = false;
@@ -716,13 +722,15 @@ class _CupertinoControlsState extends State<CupertinoControls>
                   255,
                 ),
               ),
+          draggableProgressBar: chewieController.draggableProgressBar,
         ),
       ),
     );
   }
 
   void _playPause() {
-    final isFinished = _latestValue.position >= _latestValue.duration;
+    final isFinished = _latestValue.position >= _latestValue.duration &&
+        _latestValue.duration.inSeconds > 0;
 
     setState(() {
       if (controller.value.isPlaying) {
@@ -746,20 +754,30 @@ class _CupertinoControlsState extends State<CupertinoControls>
     });
   }
 
-  void _skipBack() {
+  Future<void> _skipBack() async {
     _cancelAndRestartTimer();
     final beginning = Duration.zero.inMilliseconds;
     final skip =
         (_latestValue.position - const Duration(seconds: 15)).inMilliseconds;
-    controller.seekTo(Duration(milliseconds: math.max(skip, beginning)));
+    await controller.seekTo(Duration(milliseconds: math.max(skip, beginning)));
+    // Restoring the video speed to selected speed
+    // A delay of 1 second is added to ensure a smooth transition of speed after reversing the video as reversing is an asynchronous function
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      controller.setPlaybackSpeed(selectedSpeed);
+    });
   }
 
-  void _skipForward() {
+  Future<void> _skipForward() async {
     _cancelAndRestartTimer();
     final end = _latestValue.duration.inMilliseconds;
     final skip =
         (_latestValue.position + const Duration(seconds: 15)).inMilliseconds;
-    controller.seekTo(Duration(milliseconds: math.min(skip, end)));
+    await controller.seekTo(Duration(milliseconds: math.min(skip, end)));
+    // Restoring the video speed to selected speed
+    // A delay of 1 second is added to ensure a smooth transition of speed after forwarding the video as forwaring is an asynchronous function
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      controller.setPlaybackSpeed(selectedSpeed);
+    });
   }
 
   void _startHideTimer() {
@@ -808,12 +826,10 @@ class _CupertinoControlsState extends State<CupertinoControls>
 
 class _PlaybackSpeedDialog extends StatelessWidget {
   const _PlaybackSpeedDialog({
-    Key? key,
     required List<double> speeds,
     required double selected,
   })  : _speeds = speeds,
-        _selected = selected,
-        super(key: key);
+        _selected = selected;
 
   final List<double> _speeds;
   final double _selected;
